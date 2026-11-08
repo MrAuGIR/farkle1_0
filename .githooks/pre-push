@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Bloque le push si le formatage, clippy ou les tests échouent.
+# Activation : git config core.hooksPath .githooks
+set -euo pipefail
+echo "▶ pre-push : cargo fmt --check"
+cargo fmt --all -- --check
+echo "▶ pre-push : cargo clippy"
+cargo clippy --workspace --all-targets -- -D warnings
+echo "▶ pre-push : cargo test"
+cargo test --workspace
+echo "✔ pre-push OK"
