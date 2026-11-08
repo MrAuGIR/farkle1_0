@@ -1,8 +1,9 @@
 //! Adversaire IA (le PNJ) : choisit ses actions grâce au conseiller.
 
-use crate::advisor::Risk;
+use crate::advisor::{Decision, Risk, decide, suggest};
+use crate::combos::indices_for;
 use crate::dice::{DiceRoller, Die};
-use crate::game::{Game, GameError};
+use crate::game::{Game, GameError, Phase, RollOutcome};
 
 /// Action de l'IA pour l'étape en cours.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,7 +19,7 @@ pub enum AiAction {
 pub enum AiEvent {
     Rolled(Vec<Die>),
     Kept { dice: Vec<Die>, points: u32 },
-    Farkle { lost_points: u32 },
+    Farkle { dice: Vec<Die>, lost_points: u32 },
     Banked { points: u32, won: bool },
 }
 
@@ -40,8 +41,34 @@ impl AiPlayer {
 
     /// Prochaine action pour le joueur courant, `None` si la partie est finie.
     pub fn next_action(&self, game: &Game) -> Option<AiAction> {
-        let _ = game;
-        todo!()
+        let score = game.players()[game.current()].score;
+        match game.phase() {
+            Phase::Start => Some(AiAction::Roll),
+            Phase::Choosing => {
+                let advice = suggest(
+                    game.last_roll(),
+                    game.turn_points(),
+                    score,
+                    game.target(),
+                    self.risk,
+                );
+                let best = advice.best?;
+                indices_for(game.last_roll(), &best.combo.dice).map(AiAction::Keep)
+            }
+            Phase::Kept => Some(
+                match decide(
+                    game.turn_points(),
+                    game.dice_left(),
+                    score,
+                    game.target(),
+                    self.risk,
+                ) {
+                    Decision::Reroll => AiAction::Roll,
+                    Decision::Bank => AiAction::Bank,
+                },
+            ),
+            Phase::GameOver { .. } => None,
+        }
     }
 
     /// Joue une seule étape (pour un affichage pas à pas).
@@ -50,8 +77,28 @@ impl AiPlayer {
         game: &mut Game,
         roller: &mut dyn DiceRoller,
     ) -> Result<Option<AiEvent>, GameError> {
-        let _ = (game, roller);
-        todo!()
+        let Some(action) = self.next_action(game) else {
+            return Ok(None);
+        };
+        let event = match action {
+            AiAction::Roll => match game.roll(roller)? {
+                RollOutcome::Scoring(dice) => AiEvent::Rolled(dice),
+                RollOutcome::Farkle { dice, lost_points } => AiEvent::Farkle { dice, lost_points },
+            },
+            AiAction::Keep(indices) => {
+                let dice = indices.iter().map(|&i| game.last_roll()[i]).collect();
+                let points = game.keep(&indices)?;
+                AiEvent::Kept { dice, points }
+            }
+            AiAction::Bank => {
+                let out = game.bank()?;
+                AiEvent::Banked {
+                    points: out.banked,
+                    won: out.won,
+                }
+            }
+        };
+        Ok(Some(event))
     }
 
     /// Joue tout le tour du joueur courant et renvoie les événements.
@@ -60,8 +107,15 @@ impl AiPlayer {
         game: &mut Game,
         roller: &mut dyn DiceRoller,
     ) -> Result<Vec<AiEvent>, GameError> {
-        let _ = (game, roller);
-        todo!()
+        let mut events = Vec::new();
+        while let Some(event) = self.step(game, roller)? {
+            let turn_over = matches!(event, AiEvent::Farkle { .. } | AiEvent::Banked { .. });
+            events.push(event);
+            if turn_over {
+                break;
+            }
+        }
+        Ok(events)
     }
 }
 
@@ -182,7 +236,13 @@ mod tests {
         let mut g = Game::new(&["Hans", "Henry"], 4000).unwrap();
         let mut r = roller(&[&[1, 2, 3, 4, 6, 6], &[2, 3, 4, 6, 6]]);
         let events = ai.play_turn(&mut g, &mut r).unwrap();
-        assert_eq!(events.last(), Some(&AiEvent::Farkle { lost_points: 100 }));
+        assert_eq!(
+            events.last(),
+            Some(&AiEvent::Farkle {
+                dice: d(&[2, 3, 4, 6, 6]),
+                lost_points: 100
+            })
+        );
         assert_eq!(g.current(), 1);
         assert_eq!(g.players()[0].score, 0);
     }

@@ -7,8 +7,10 @@
 //! Relancer est intéressant tant que `M(n) > p(n) × t`, soit `t < M(n) / p(n)`.
 //! Ces valeurs sont calculées exactement, par énumération des 6^n lancers.
 
-use crate::combos::Combo;
+use crate::combos::{Combo, find_combos};
 use crate::dice::Die;
+use crate::game::DICE_COUNT;
+use std::sync::OnceLock;
 
 /// Recommandation après une mise de côté.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,40 +55,128 @@ pub struct Advice {
 
 /// Probabilité de Farkle en lançant `n` dés (0 si `n` vaut 0 ou plus de 6).
 pub fn farkle_probability(n: usize) -> f64 {
-    let _ = n;
-    todo!()
+    stats(n).map_or(0.0, |s| s.farkle_probability)
 }
 
 /// Espérance du meilleur score d'un lancer de `n` dés (Farkle compté 0).
 pub fn expected_best_score(n: usize) -> f64 {
-    let _ = n;
-    todo!()
+    stats(n).map_or(0.0, |s| s.expected_best)
 }
 
 /// Points du tour espérés en relançant `n` dés une fois avec `turn_points` en jeu.
 pub fn expected_reroll(turn_points: u32, n: usize) -> f64 {
-    let _ = (turn_points, n);
-    todo!()
+    expected_reroll_with(turn_points, n, Risk::NORMAL)
 }
 
 /// Points du tour en dessous desquels relancer `n` dés est rentable.
 pub fn reroll_threshold(n: usize) -> f64 {
-    let _ = n;
-    todo!()
+    match farkle_probability(n) {
+        p if p > 0.0 => expected_best_score(n) / p,
+        _ => f64::INFINITY,
+    }
 }
 
 /// Relancer ou encaisser, une fois les dés mis de côté.
 /// Encaisse toujours si cela fait gagner la partie.
 pub fn decide(turn_points: u32, dice_left: usize, score: u32, target: u32, risk: Risk) -> Decision {
-    let _ = (turn_points, dice_left, score, target, risk);
-    todo!()
+    if score + turn_points >= target || stats(dice_left).is_none() {
+        return Decision::Bank;
+    }
+    if expected_reroll_with(turn_points, dice_left, risk) > turn_points as f64 {
+        Decision::Reroll
+    } else {
+        Decision::Bank
+    }
 }
 
 /// Conseil pour un lancer : toutes les combinaisons, la meilleure mise de côté
 /// (celle qui maximise les points espérés du tour) et la décision qui suit.
 pub fn suggest(roll: &[Die], turn_points: u32, score: u32, target: u32, risk: Risk) -> Advice {
-    let _ = (roll, turn_points, score, target, risk);
-    todo!()
+    let combos = find_combos(roll);
+    let mut best: Option<(f64, KeepAdvice)> = None;
+    for combo in &combos {
+        let turn_points_after = turn_points + combo.score;
+        let dice_left_after = match roll.len() - combo.dice.len() {
+            0 => DICE_COUNT,
+            n => n,
+        };
+        let decision = decide(turn_points_after, dice_left_after, score, target, risk);
+        let expected = expected_reroll_with(turn_points_after, dice_left_after, risk);
+        let value = if score + turn_points_after >= target {
+            f64::INFINITY
+        } else {
+            expected.max(turn_points_after as f64)
+        };
+        // Les combinaisons arrivent par score décroissant : à valeur égale,
+        // on garde la plus rentable immédiatement.
+        if best.as_ref().is_none_or(|(v, _)| value > *v) {
+            let advice = KeepAdvice {
+                combo: combo.clone(),
+                turn_points_after,
+                dice_left_after,
+                farkle_probability: farkle_probability(dice_left_after),
+                expected_reroll: expected_reroll(turn_points_after, dice_left_after),
+                decision,
+            };
+            best = Some((value, advice));
+        }
+    }
+    Advice {
+        combos,
+        best: best.map(|(_, a)| a),
+    }
+}
+
+fn expected_reroll_with(turn_points: u32, n: usize, risk: Risk) -> f64 {
+    (1.0 - farkle_probability(n)) * turn_points as f64 + risk.0 * expected_best_score(n)
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RollStats {
+    farkle_probability: f64,
+    expected_best: f64,
+}
+
+/// Statistiques exactes pour 1 à 6 dés, calculées une fois pour toutes.
+fn stats(n: usize) -> Option<RollStats> {
+    static TABLE: OnceLock<Vec<RollStats>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| (0..=DICE_COUNT).map(compute_stats).collect());
+    (1..=DICE_COUNT).contains(&n).then(|| table[n])
+}
+
+/// Énumère les lancers distincts (multi-ensembles) de `n` dés avec leur poids.
+fn compute_stats(n: usize) -> RollStats {
+    fn rec(face: u8, left: usize, current: &mut Vec<Die>, weight: f64, acc: &mut (f64, f64)) {
+        if left == 0 {
+            match find_combos(current).first() {
+                Some(best) => acc.1 += weight * best.score as f64,
+                None => acc.0 += weight,
+            }
+            return;
+        }
+        if face > 6 {
+            return;
+        }
+        // On choisit combien de dés montrent `face` (k), poids multinomial 1/k!.
+        let mut inv_fact = 1.0;
+        for k in 0..=left {
+            if k > 0 {
+                inv_fact /= k as f64;
+                current.push(Die::new(face).unwrap());
+            }
+            rec(face + 1, left - k, current, weight * inv_fact, acc);
+        }
+        // On a poussé exactement `left` dés pendant la boucle : on les retire.
+        current.truncate(current.len() - left);
+    }
+    let mut acc = (0.0, 0.0);
+    let n_fact: f64 = (1..=n).map(|i| i as f64).product();
+    let total = 6f64.powi(n as i32);
+    rec(1, n, &mut Vec::new(), n_fact / total, &mut acc);
+    RollStats {
+        farkle_probability: acc.0,
+        expected_best: acc.1,
+    }
 }
 
 #[cfg(test)]
@@ -247,7 +337,7 @@ mod tests {
     #[test]
     fn suggest_takes_the_win() {
         let a = suggest(
-            &dice_from(&[5, 2, 3, 4, 6, 6]).unwrap(),
+            &dice_from(&[5, 2, 3, 3, 6, 6]).unwrap(),
             0,
             3950,
             4000,

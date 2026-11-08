@@ -47,8 +47,15 @@ pub fn find_combos(roll: &[Die]) -> Vec<Combo> {
 /// Positions (base 0, triées) dans `roll` des dés de `dice`, en prenant pour chaque
 /// valeur les premières occurrences. `None` si `dice` n'est pas inclus dans `roll`.
 pub fn indices_for(roll: &[Die], dice: &[Die]) -> Option<Vec<usize>> {
-    let _ = (roll, dice);
-    todo!()
+    let mut used = vec![false; roll.len()];
+    let mut indices = Vec::with_capacity(dice.len());
+    for die in dice {
+        let i = (0..roll.len()).find(|&i| !used[i] && roll[i] == *die)?;
+        used[i] = true;
+        indices.push(i);
+    }
+    indices.sort_unstable();
+    Some(indices)
 }
 
 #[cfg(test)]
