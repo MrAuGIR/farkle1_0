@@ -1,5 +1,7 @@
 //! Moteur du Farkle : dés, scoring, partie, conseiller et IA (sans I/O).
 
+pub mod advisor;
+pub mod ai;
 pub mod combos;
 pub mod dice;
 pub mod game;

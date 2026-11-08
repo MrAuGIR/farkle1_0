@@ -44,6 +44,13 @@ pub fn find_combos(roll: &[Die]) -> Vec<Combo> {
     combos
 }
 
+/// Positions (base 0, triées) dans `roll` des dés de `dice`, en prenant pour chaque
+/// valeur les premières occurrences. `None` si `dice` n'est pas inclus dans `roll`.
+pub fn indices_for(roll: &[Die], dice: &[Die]) -> Option<Vec<usize>> {
+    let _ = (roll, dice);
+    todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,6 +108,22 @@ mod tests {
         let pos_1 = c.iter().position(|x| x.0 == vec![1]).unwrap();
         let pos_55 = c.iter().position(|x| x.0 == vec![5, 5]).unwrap();
         assert!(pos_1 < pos_55, "{c:?}");
+    }
+
+    #[test]
+    fn indices_for_maps_values_to_positions() {
+        let roll = dice_from(&[5, 1, 5, 2]).unwrap();
+        assert_eq!(
+            indices_for(&roll, &dice_from(&[1, 5]).unwrap()),
+            Some(vec![0, 1])
+        );
+        assert_eq!(
+            indices_for(&roll, &dice_from(&[5, 5]).unwrap()),
+            Some(vec![0, 2])
+        );
+        assert_eq!(indices_for(&roll, &dice_from(&[5, 5, 5]).unwrap()), None);
+        assert_eq!(indices_for(&roll, &dice_from(&[6]).unwrap()), None);
+        assert_eq!(indices_for(&roll, &[]), Some(vec![]));
     }
 
     #[test]
