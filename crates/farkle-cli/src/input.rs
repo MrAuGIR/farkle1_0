@@ -1,5 +1,6 @@
 //! Lecture des commandes saisies par le joueur.
 
+use farkle_core::dice::Die;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,6 +60,28 @@ pub fn parse_command(line: &str) -> Result<Command, InputError> {
     Ok(command)
 }
 
+/// Erreur de saisie d'un lancer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RollInputError {
+    Empty,
+    InvalidValue(String),
+    WrongCount { expected: usize, got: usize },
+}
+
+impl fmt::Display for RollInputError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = f;
+        todo!()
+    }
+}
+
+/// Analyse un lancer saisi à la main : valeurs de 1 à 6, séparées par des espaces
+/// ou des virgules, ou collées (`155326`). Il faut exactement `expected` dés.
+pub fn parse_roll(line: &str, expected: usize) -> Result<Vec<Die>, RollInputError> {
+    let _ = (line, expected);
+    todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,6 +119,56 @@ mod tests {
         assert_eq!(parse_command("0"), Err(InputError::Unknown("0".into())));
         assert_eq!(parse_command("1 z"), Err(InputError::Unknown("z".into())));
         assert_eq!(parse_command("17"), Err(InputError::Unknown("17".into())));
+    }
+
+    fn values(dice: Vec<Die>) -> Vec<u8> {
+        dice.into_iter().map(|d| d.value()).collect()
+    }
+
+    #[test]
+    fn roll_values() {
+        assert_eq!(
+            parse_roll("1 5 5 3 2 6", 6).map(values),
+            Ok(vec![1, 5, 5, 3, 2, 6])
+        );
+        assert_eq!(
+            parse_roll("155326\n", 6).map(values),
+            Ok(vec![1, 5, 5, 3, 2, 6])
+        );
+        assert_eq!(parse_roll("1,5, 5", 3).map(values), Ok(vec![1, 5, 5]));
+    }
+
+    #[test]
+    fn roll_errors() {
+        assert_eq!(parse_roll("  ", 6), Err(RollInputError::Empty));
+        assert_eq!(
+            parse_roll("1 2 7 4 5 6", 6),
+            Err(RollInputError::InvalidValue("7".into()))
+        );
+        assert_eq!(
+            parse_roll("1 2 x", 3),
+            Err(RollInputError::InvalidValue("x".into()))
+        );
+        assert_eq!(
+            parse_roll("1 2 3", 6),
+            Err(RollInputError::WrongCount {
+                expected: 6,
+                got: 3
+            })
+        );
+        assert!(
+            RollInputError::WrongCount {
+                expected: 6,
+                got: 3
+            }
+            .to_string()
+            .contains("6 dés attendus")
+        );
+        assert!(
+            RollInputError::InvalidValue("7".into())
+                .to_string()
+                .contains("« 7 »")
+        );
     }
 
     #[test]

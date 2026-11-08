@@ -1,6 +1,7 @@
 //! Arguments de la ligne de commande.
 
 use crate::play::PlayConfig;
+use crate::train::TrainConfig;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use farkle_core::advisor::Risk;
 use farkle_core::game::DEFAULT_TARGET;
@@ -22,8 +23,27 @@ pub struct Cli {
 pub enum Commands {
     /// Jouer une partie contre l'IA (commande par défaut).
     Play(PlayArgs),
+    /// Mode entraîner : saisissez vos lancers, le conseiller vous guide.
+    Train(TrainArgs),
     /// Afficher les règles du jeu.
     Rules,
+}
+
+#[derive(Debug, Args, PartialEq)]
+pub struct TrainArgs {
+    /// Score à atteindre.
+    #[arg(short, long, default_value_t = DEFAULT_TARGET,
+          value_parser = clap::value_parser!(u32).range(1..))]
+    pub target: u32,
+    /// Votre score actuel (pour s'entraîner sur une fin de partie).
+    #[arg(short, long, default_value_t = 0)]
+    pub score: u32,
+}
+
+impl TrainArgs {
+    pub fn config(&self) -> TrainConfig {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -144,6 +164,41 @@ mod tests {
         assert!(parse(&["play", "--target", "0"]).is_err());
         assert!(parse(&["play", "--target", "abc"]).is_err());
         assert!(parse(&["play", "--aide", "peut-etre"]).is_err());
+    }
+
+    #[test]
+    fn train_subcommand() {
+        let Some(Commands::Train(t)) = parse(&["train"]).unwrap().command else {
+            panic!("attendu train");
+        };
+        assert_eq!(
+            t,
+            TrainArgs {
+                target: 4000,
+                score: 0
+            }
+        );
+        assert_eq!(
+            t.config(),
+            TrainConfig {
+                target: 4000,
+                score: 0
+            }
+        );
+        let Some(Commands::Train(t)) = parse(&["train", "--target", "2000", "--score", "1500"])
+            .unwrap()
+            .command
+        else {
+            panic!("attendu train");
+        };
+        assert_eq!(
+            t.config(),
+            TrainConfig {
+                target: 2000,
+                score: 1500
+            }
+        );
+        assert!(parse(&["train", "--target", "0"]).is_err());
     }
 
     #[test]

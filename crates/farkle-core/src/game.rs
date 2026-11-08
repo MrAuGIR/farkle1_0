@@ -75,6 +75,8 @@ pub enum GameError {
         expected: usize,
         got: usize,
     },
+    /// Scores de départ invalides (un par joueur, inférieurs au score cible).
+    InvalidScores,
 }
 
 impl fmt::Display for GameError {
@@ -103,6 +105,10 @@ impl fmt::Display for GameError {
             GameError::WrongDiceCount { expected, got } => {
                 write!(f, "{expected} dés attendus, {got} saisis")
             }
+            GameError::InvalidScores => write!(
+                f,
+                "scores de départ invalides (un par joueur, inférieurs au score cible)"
+            ),
         }
     }
 }
@@ -144,6 +150,12 @@ impl Game {
             dice_left: DICE_COUNT,
             last_roll: Vec::new(),
         })
+    }
+
+    /// Fixe les scores de départ (pour reprendre une situation en cours de partie).
+    pub fn with_scores(self, scores: &[u32]) -> Result<Game, GameError> {
+        let _ = scores;
+        todo!()
     }
 
     pub fn players(&self) -> &[Player] {
@@ -547,6 +559,21 @@ mod tests {
             .submit_roll(dice_from(&[1, 2, 3, 4, 6, 6]).unwrap())
             .unwrap();
         assert!(matches!(out, RollOutcome::Scoring(_)));
+    }
+
+    #[test]
+    fn starting_scores() {
+        let g = game().with_scores(&[3500, 1200]).unwrap();
+        assert_eq!(g.players()[0].score, 3500);
+        assert_eq!(g.players()[1].score, 1200);
+        assert_eq!(
+            game().with_scores(&[100]).unwrap_err(),
+            GameError::InvalidScores
+        );
+        assert_eq!(
+            game().with_scores(&[4000, 0]).unwrap_err(),
+            GameError::InvalidScores
+        );
     }
 
     #[test]
