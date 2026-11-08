@@ -63,3 +63,22 @@ fn seeded_game_following_advice_reaches_the_end() {
         .stdout(predicate::str::contains("Partie terminée"))
         .stdout(predicate::str::contains("Combinaisons possibles"));
 }
+
+#[test]
+fn train_session_through_the_binary() {
+    farkle()
+        .args(["train", "--target", "1000"])
+        .write_stdin("1 1 1 5 2 3\ns\nb\n")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("1 1 1 5 → 1050 pts"))
+        .stdout(predicate::str::contains("Objectif atteint"));
+}
+
+#[test]
+fn train_rejects_a_score_above_target() {
+    farkle()
+        .args(["train", "--target", "1000", "--score", "1000"])
+        .assert()
+        .failure();
+}

@@ -1,6 +1,7 @@
 use clap::Parser;
 use farkle_cli::cli::{Cli, Commands, PlayArgs};
 use farkle_cli::play::{PlayResult, run_play};
+use farkle_cli::train::run_train;
 use farkle_core::dice::RandomRoller;
 use std::io::{self, Write};
 use std::process::ExitCode;
@@ -12,6 +13,16 @@ fn main() -> ExitCode {
         Commands::Rules => {
             println!("{}", farkle_core::RULES_MD);
             ExitCode::SUCCESS
+        }
+        Commands::Train(args) => {
+            let stdin = io::stdin();
+            match run_train(&args.config(), &mut stdin.lock(), &mut io::stdout()) {
+                Ok(_) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("erreur : {e}");
+                    ExitCode::FAILURE
+                }
+            }
         }
         Commands::Play(args) => {
             let seed = args.seed.unwrap_or_else(|| {
