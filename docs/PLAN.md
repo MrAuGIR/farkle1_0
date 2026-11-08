@@ -90,7 +90,7 @@ Dépendances prévues : `rand`, `clap` (derive), `wasm-bindgen`, `getrandom` (fe
 - `advisor::farkle_probability(n_dice)`, valeurs exactes calculées par énumération des 6^n lancers.
 - `advisor::suggest(roll, turn_points, scores, target) -> Advice { best_keep, all_combos, should_bank, expected_reroll }`.
 - `ai::AiPlayer` (niveau normal) s'appuie sur `suggest`. Option : un niveau « prudent » ou « audacieux » selon un seuil.
-- Tests : probabilités connues (1 dé ≈ 66,7 %, 6 dés ≈ 2,3 %) et décisions attendues sur des cas typiques.
+- Tests : probabilités connues (1 dé ≈ 66,7 %, 6 dés ≈ 3,09 %) et décisions attendues sur des cas typiques.
 
 ### Lot 4 — `lot-4/cli-play` : console, jeu contre l'IA
 - `farkle play --target 4000 --aide on|off` : la partie se joue contre l'IA.

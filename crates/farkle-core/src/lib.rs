@@ -1,5 +1,9 @@
 //! Moteur du Farkle : dés, scoring, partie, conseiller et IA (sans I/O).
 
+pub mod combos;
+pub mod dice;
+pub mod scoring;
+
 /// Règles du jeu (source unique : `docs/REGLES.md`).
 pub const RULES_MD: &str = include_str!("../../../docs/REGLES.md");
 
