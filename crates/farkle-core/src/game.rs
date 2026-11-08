@@ -6,6 +6,7 @@
 //! ou `roll` sans dé qui marque : Farkle, joueur suivant.
 
 use crate::dice::{DiceRoller, Die};
+use crate::scoring::{is_farkle, score_selection};
 use std::fmt;
 
 /// Nombre de dés en jeu.
@@ -78,8 +79,31 @@ pub enum GameError {
 
 impl fmt::Display for GameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let _ = f;
-        todo!()
+        match self {
+            GameError::NoPlayers => write!(f, "il faut au moins un joueur"),
+            GameError::InvalidTarget => write!(f, "le score cible doit être supérieur à 0"),
+            GameError::WrongPhase { phase } => {
+                let hint = match phase {
+                    Phase::Start => "il faut d'abord lancer les dés",
+                    Phase::Choosing => "il faut d'abord mettre de côté des dés qui marquent",
+                    Phase::Kept => "il faut relancer ou encaisser",
+                    Phase::GameOver { .. } => "la partie est terminée",
+                };
+                write!(f, "action impossible : {hint}")
+            }
+            GameError::GameOver => write!(f, "la partie est terminée"),
+            GameError::EmptySelection => write!(f, "aucun dé sélectionné"),
+            GameError::IndexOutOfRange { index } => write!(f, "le dé n°{} n'existe pas", index + 1),
+            GameError::DuplicateIndex { index } => {
+                write!(f, "le dé n°{} est sélectionné deux fois", index + 1)
+            }
+            GameError::NonScoringSelection => {
+                write!(f, "la sélection contient un dé qui ne marque pas")
+            }
+            GameError::WrongDiceCount { expected, got } => {
+                write!(f, "{expected} dés attendus, {got} saisis")
+            }
+        }
     }
 }
 
@@ -99,8 +123,27 @@ pub struct Game {
 impl Game {
     /// Nouvelle partie ; le premier joueur commence.
     pub fn new(names: &[&str], target: u32) -> Result<Game, GameError> {
-        let _ = (names, target);
-        todo!()
+        if names.is_empty() {
+            return Err(GameError::NoPlayers);
+        }
+        if target == 0 {
+            return Err(GameError::InvalidTarget);
+        }
+        Ok(Game {
+            players: names
+                .iter()
+                .map(|n| Player {
+                    name: n.to_string(),
+                    score: 0,
+                })
+                .collect(),
+            target,
+            current: 0,
+            phase: Phase::Start,
+            turn_points: 0,
+            dice_left: DICE_COUNT,
+            last_roll: Vec::new(),
+        })
     }
 
     pub fn players(&self) -> &[Player] {
@@ -135,31 +178,111 @@ impl Game {
     }
     /// Main chaude : les 6 dés ont marqué, on peut relancer les 6.
     pub fn is_hot_dice(&self) -> bool {
-        todo!()
+        self.phase == Phase::Kept && self.dice_left == DICE_COUNT
     }
 
     /// Lance les dés restants avec `roller`.
     pub fn roll(&mut self, roller: &mut dyn DiceRoller) -> Result<RollOutcome, GameError> {
-        let _ = roller;
-        todo!()
+        self.ensure_can_roll()?;
+        let dice = roller.roll(self.dice_left);
+        Ok(self.apply_roll(dice))
     }
 
     /// Joue un lancer fourni (saisie manuelle du mode entraîner).
     pub fn submit_roll(&mut self, dice: Vec<Die>) -> Result<RollOutcome, GameError> {
-        let _ = dice;
-        todo!()
+        self.ensure_can_roll()?;
+        if dice.len() != self.dice_left {
+            return Err(GameError::WrongDiceCount {
+                expected: self.dice_left,
+                got: dice.len(),
+            });
+        }
+        Ok(self.apply_roll(dice))
     }
 
     /// Met de côté les dés du dernier lancer aux positions `indices` (base 0).
     /// Retourne les points gagnés. L'état est inchangé en cas d'erreur.
     pub fn keep(&mut self, indices: &[usize]) -> Result<u32, GameError> {
-        let _ = indices;
-        todo!()
+        self.ensure_phase(Phase::Choosing)?;
+        if indices.is_empty() {
+            return Err(GameError::EmptySelection);
+        }
+        let mut used = [false; DICE_COUNT];
+        let mut selection = Vec::with_capacity(indices.len());
+        for &index in indices {
+            if index >= self.last_roll.len() {
+                return Err(GameError::IndexOutOfRange { index });
+            }
+            if std::mem::replace(&mut used[index], true) {
+                return Err(GameError::DuplicateIndex { index });
+            }
+            selection.push(self.last_roll[index]);
+        }
+        let points = score_selection(&selection).ok_or(GameError::NonScoringSelection)?;
+        self.turn_points += points;
+        self.dice_left -= selection.len();
+        if self.dice_left == 0 {
+            self.dice_left = DICE_COUNT; // main chaude
+        }
+        self.phase = Phase::Kept;
+        Ok(points)
     }
 
     /// Encaisse les points du tour et passe la main (ou termine la partie).
     pub fn bank(&mut self) -> Result<BankOutcome, GameError> {
-        todo!()
+        self.ensure_phase(Phase::Kept)?;
+        let banked = self.turn_points;
+        let player = &mut self.players[self.current];
+        player.score += banked;
+        let new_score = player.score;
+        let won = new_score >= self.target;
+        if won {
+            self.phase = Phase::GameOver {
+                winner: self.current,
+            };
+        } else {
+            self.next_player();
+        }
+        Ok(BankOutcome {
+            banked,
+            new_score,
+            won,
+        })
+    }
+
+    fn ensure_phase(&self, expected: Phase) -> Result<(), GameError> {
+        match self.phase {
+            Phase::GameOver { .. } => Err(GameError::GameOver),
+            p if p == expected => Ok(()),
+            phase => Err(GameError::WrongPhase { phase }),
+        }
+    }
+
+    fn ensure_can_roll(&self) -> Result<(), GameError> {
+        match self.phase {
+            Phase::Start | Phase::Kept => Ok(()),
+            _ => self.ensure_phase(Phase::Start),
+        }
+    }
+
+    fn apply_roll(&mut self, dice: Vec<Die>) -> RollOutcome {
+        if is_farkle(&dice) {
+            let lost_points = self.turn_points;
+            self.next_player();
+            RollOutcome::Farkle { dice, lost_points }
+        } else {
+            self.last_roll = dice.clone();
+            self.phase = Phase::Choosing;
+            RollOutcome::Scoring(dice)
+        }
+    }
+
+    fn next_player(&mut self) {
+        self.current = (self.current + 1) % self.players.len();
+        self.phase = Phase::Start;
+        self.turn_points = 0;
+        self.dice_left = DICE_COUNT;
+        self.last_roll.clear();
     }
 }
 
