@@ -20,6 +20,15 @@ cargo run -p farkle-cli -- play --ia audacieuse            # IA prudente | norma
 En jeu : numéros des dés à garder (`1 3 5` ou `135`), `r` relancer, `b` encaisser,
 `s` suivre le conseil, `a` aide on/off, `?` règles, `q` quitter.
 
+## Mode entraîner
+```bash
+cargo run -p farkle-cli -- train                            # objectif 4000, score 0
+cargo run -p farkle-cli -- train --target 4000 --score 3500 # s'entraîner sur une fin de partie
+```
+Saisissez chaque lancer (`1 5 5 3 2 6` ou `155326`) : le programme affiche les combinaisons possibles,
+la meilleure mise de côté, puis conseille de relancer ou d'encaisser (risque de Farkle, espérance).
+Indiquez ensuite les dés réellement gardés, puis `r` (je relance) ou `b` (j'encaisse).
+
 ## Développement
 ```bash
 git config core.hooksPath .githooks   # active le hook pre-push (fmt + clippy + tests)

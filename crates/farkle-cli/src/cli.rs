@@ -42,7 +42,10 @@ pub struct TrainArgs {
 
 impl TrainArgs {
     pub fn config(&self) -> TrainConfig {
-        todo!()
+        TrainConfig {
+            target: self.target,
+            score: self.score,
+        }
     }
 }
 

@@ -70,16 +70,36 @@ pub enum RollInputError {
 
 impl fmt::Display for RollInputError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let _ = f;
-        todo!()
+        match self {
+            RollInputError::Empty => write!(f, "vous n'avez rien saisi"),
+            RollInputError::InvalidValue(s) => {
+                write!(f, "valeur de dé invalide : « {s} » (de 1 à 6)")
+            }
+            RollInputError::WrongCount { expected, got } => {
+                write!(f, "{expected} dés attendus, {got} saisis")
+            }
+        }
     }
 }
 
 /// Analyse un lancer saisi à la main : valeurs de 1 à 6, séparées par des espaces
 /// ou des virgules, ou collées (`155326`). Il faut exactement `expected` dés.
 pub fn parse_roll(line: &str, expected: usize) -> Result<Vec<Die>, RollInputError> {
-    let _ = (line, expected);
-    todo!()
+    let mut dice = Vec::new();
+    for token in line.split(|c: char| c.is_whitespace() || c == ',') {
+        if token.is_empty() {
+            continue;
+        }
+        if !token.chars().all(|c| ('1'..='6').contains(&c)) {
+            return Err(RollInputError::InvalidValue(token.to_string()));
+        }
+        dice.extend(token.bytes().filter_map(|b| Die::new(b - b'0')));
+    }
+    match dice.len() {
+        0 => Err(RollInputError::Empty),
+        n if n != expected => Err(RollInputError::WrongCount { expected, got: n }),
+        _ => Ok(dice),
+    }
 }
 
 #[cfg(test)]

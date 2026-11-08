@@ -4,6 +4,7 @@ use farkle_core::advisor::{Decision, KeepAdvice};
 use farkle_core::combos::{Combo, indices_for};
 use farkle_core::dice::Die;
 use farkle_core::game::Game;
+use farkle_core::scoring::Pattern;
 
 /// Valeurs séparées par des espaces : `1 1 5`.
 pub fn dice_values(dice: &[Die]) -> String {
@@ -23,8 +24,35 @@ pub fn roll(dice: &[Die]) -> String {
 
 /// `1 1 1 5 → 1050 pts (trois 1 + un 5)`
 pub fn combo(c: &Combo) -> String {
-    let patterns = join(c.patterns.iter().map(|p| p.to_string()), " + ");
-    format!("{} → {} pts ({patterns})", dice_values(&c.dice), c.score)
+    format!(
+        "{} → {} pts ({})",
+        dice_values(&c.dice),
+        c.score,
+        patterns(&c.patterns)
+    )
+}
+
+/// Motifs séparés par « + », les dés isolés identiques regroupés : `un 1 + deux 5`.
+pub fn patterns(list: &[Pattern]) -> String {
+    let mut parts = Vec::new();
+    let mut singles = [0usize; 7];
+    for p in list {
+        match p {
+            Pattern::Single(face) => singles[*face as usize] += 1,
+            other => parts.push(other.to_string()),
+        }
+    }
+    for face in [1usize, 5] {
+        match singles[face] {
+            0 => {}
+            1 => parts.push(format!("un {face}")),
+            n => parts.push(format!(
+                "{} {face}",
+                ["deux", "trois", "quatre"][(n - 2).min(2)]
+            )),
+        }
+    }
+    parts.join(" + ")
 }
 
 /// Liste numérotée des combinaisons possibles.
@@ -131,6 +159,14 @@ mod tests {
     fn combo_line() {
         let best = &find_combos(&d(&[1, 1, 1, 5, 2, 3]))[0];
         assert_eq!(combo(best), "1 1 1 5 → 1050 pts (trois 1 + un 5)");
+    }
+
+    #[test]
+    fn identical_singles_are_grouped() {
+        let c = &find_combos(&d(&[1, 5, 5, 3, 2, 6]))[0];
+        assert_eq!(combo(c), "1 5 5 → 200 pts (un 1 + deux 5)");
+        let c = &find_combos(&d(&[1, 1, 2, 3, 4, 6]))[0];
+        assert_eq!(combo(c), "1 1 → 200 pts (deux 1)");
     }
 
     #[test]

@@ -153,9 +153,14 @@ impl Game {
     }
 
     /// Fixe les scores de départ (pour reprendre une situation en cours de partie).
-    pub fn with_scores(self, scores: &[u32]) -> Result<Game, GameError> {
-        let _ = scores;
-        todo!()
+    pub fn with_scores(mut self, scores: &[u32]) -> Result<Game, GameError> {
+        if scores.len() != self.players.len() || scores.iter().any(|&s| s >= self.target) {
+            return Err(GameError::InvalidScores);
+        }
+        for (player, &score) in self.players.iter_mut().zip(scores) {
+            player.score = score;
+        }
+        Ok(self)
     }
 
     pub fn players(&self) -> &[Player] {
