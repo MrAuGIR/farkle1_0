@@ -2,6 +2,7 @@
 
 pub mod combos;
 pub mod dice;
+pub mod game;
 pub mod scoring;
 
 /// Règles du jeu (source unique : `docs/REGLES.md`).
