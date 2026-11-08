@@ -1,14 +1,13 @@
 //! Mise en forme du texte affiché en console (fonctions pures).
 
 use farkle_core::advisor::{Decision, KeepAdvice};
-use farkle_core::combos::Combo;
+use farkle_core::combos::{Combo, indices_for};
 use farkle_core::dice::Die;
 use farkle_core::game::Game;
 
 /// Valeurs séparées par des espaces : `1 1 5`.
 pub fn dice_values(dice: &[Die]) -> String {
-    let _ = dice;
-    todo!()
+    join(dice.iter().map(|d| d.value().to_string()), " ")
 }
 
 /// Lancer sur deux lignes : les dés, puis leur numéro.
@@ -17,38 +16,88 @@ pub fn dice_values(dice: &[Die]) -> String {
 ///  1   2   3
 /// ```
 pub fn roll(dice: &[Die]) -> String {
-    let _ = dice;
-    todo!()
+    let faces = join(dice.iter().map(|d| format!("[{}]", d.value())), " ");
+    let numbers = join((1..=dice.len()).map(|i| format!(" {i} ")), " ");
+    format!("{faces}\n{numbers}")
 }
 
 /// `1 1 1 5 → 1050 pts (trois 1 + un 5)`
 pub fn combo(c: &Combo) -> String {
-    let _ = c;
-    todo!()
+    let patterns = join(c.patterns.iter().map(|p| p.to_string()), " + ");
+    format!("{} → {} pts ({patterns})", dice_values(&c.dice), c.score)
 }
 
 /// Liste numérotée des combinaisons possibles.
 pub fn combos(list: &[Combo]) -> String {
-    let _ = list;
-    todo!()
+    if list.is_empty() {
+        return "  (aucune)".into();
+    }
+    join(list.iter().map(|c| format!("  - {}", combo(c))), "\n")
 }
 
 /// Conseil pour un lancer.
 pub fn advice(a: &KeepAdvice, roll: &[Die]) -> String {
-    let _ = (a, roll);
-    todo!()
+    let positions = indices_for(roll, &a.combo.dice).unwrap_or_default();
+    let label = if positions.len() > 1 {
+        "dés n°"
+    } else {
+        "dé n°"
+    };
+    let positions = join(positions.iter().map(|i| (i + 1).to_string()), " ");
+    let next = match a.decision {
+        Decision::Reroll => format!(
+            "relancer {} (risque de Farkle {})",
+            dice_count(a.dice_left_after),
+            percent(a.farkle_probability)
+        ),
+        Decision::Bank => "encaisser".into(),
+    };
+    format!(
+        "Conseil : garder {} ({label}{positions}) → {} pts au tour, puis {next}",
+        dice_values(&a.combo.dice),
+        a.turn_points_after
+    )
 }
 
 /// Conseil après une mise de côté.
 pub fn decision(d: Decision, dice_left: usize, farkle_probability: f64) -> String {
-    let _ = (d, dice_left, farkle_probability);
-    todo!()
+    let p = percent(farkle_probability);
+    match d {
+        Decision::Reroll if dice_left == 1 => {
+            format!("Conseil : relancer le dé (risque de Farkle {p})")
+        }
+        Decision::Reroll => {
+            format!("Conseil : relancer les {dice_left} dés (risque de Farkle {p})")
+        }
+        Decision::Bank => format!(
+            "Conseil : encaisser (risque de Farkle {p} si vous relancez {})",
+            dice_count(dice_left)
+        ),
+    }
 }
 
 /// Tableau des scores : `Henry 1050 | Hans 300 (cible 4000)`.
 pub fn scores(game: &Game) -> String {
-    let _ = game;
-    todo!()
+    let players = join(
+        game.players()
+            .iter()
+            .map(|p| format!("{} {}", p.name, p.score)),
+        " | ",
+    );
+    format!("{players} (cible {})", game.target())
+}
+
+/// `1 dé`, `5 dés`.
+pub fn dice_count(n: usize) -> String {
+    if n == 1 {
+        "1 dé".into()
+    } else {
+        format!("{n} dés")
+    }
+}
+
+fn join(items: impl Iterator<Item = String>, sep: &str) -> String {
+    items.collect::<Vec<_>>().join(sep)
 }
 
 /// Pourcentage à une décimale : `7.7 %`.

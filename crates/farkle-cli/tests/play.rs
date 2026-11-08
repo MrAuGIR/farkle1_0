@@ -67,6 +67,7 @@ fn reroll_accumulates_and_ai_plays_its_turn() {
             &[1, 2, 3, 4, 6, 6], // Henry garde le 1
             &[5, 2, 3, 4, 6],    // relance 5 dés, garde la suite 2-6 (750)
             &[2, 2, 3, 3, 4, 6], // Hans : Farkle
+            &[1, 2, 3, 4, 6, 6], // Henry relance, puis quitte
         ],
         "1\nr\n1 2 3 4 5\nb\nq\n",
     );
@@ -77,12 +78,9 @@ fn reroll_accumulates_and_ai_plays_its_turn() {
 
 #[test]
 fn hot_dice_is_announced() {
-    let (_, out) = play(
-        config(4000, false),
-        &[&[1, 2, 3, 4, 5, 6], &[2, 2, 3, 3, 4, 6]],
-        "123456\nr\nq\n",
-    );
+    let (res, out) = play(config(1500, false), &[&[1, 2, 3, 4, 5, 6]], "123456\nb\n");
     assert!(out.contains("Main chaude"), "{out}");
+    assert_eq!(res, PlayResult::Finished { winner: 0 });
 }
 
 #[test]

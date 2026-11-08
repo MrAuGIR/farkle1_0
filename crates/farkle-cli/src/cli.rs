@@ -61,14 +61,28 @@ pub struct PlayArgs {
 
 impl Default for PlayArgs {
     fn default() -> Self {
-        let _ = Risk::NORMAL;
-        todo!()
+        PlayArgs {
+            target: DEFAULT_TARGET,
+            aide: OnOff::Off,
+            ia: AiLevel::Normale,
+            nom: "Henry".into(),
+            seed: None,
+        }
     }
 }
 
 impl PlayArgs {
     pub fn config(&self) -> PlayConfig {
-        todo!()
+        PlayConfig {
+            target: self.target,
+            help: self.aide == OnOff::On,
+            risk: match self.ia {
+                AiLevel::Prudente => Risk::CAUTIOUS,
+                AiLevel::Normale => Risk::NORMAL,
+                AiLevel::Audacieuse => Risk::BOLD,
+            },
+            player_name: self.nom.clone(),
+        }
     }
 }
 

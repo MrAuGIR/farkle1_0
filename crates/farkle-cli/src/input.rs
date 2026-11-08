@@ -23,16 +23,40 @@ pub enum InputError {
 
 impl fmt::Display for InputError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let _ = f;
-        todo!()
+        match self {
+            InputError::Empty => write!(f, "vous n'avez rien saisi"),
+            InputError::Unknown(s) => write!(f, "saisie incomprise : « {s} »"),
+        }
     }
 }
 
 /// Analyse une ligne saisie. Les numéros de dés commencent à 1 ; ils peuvent être
 /// séparés par des espaces ou des virgules, ou collés (`135`).
 pub fn parse_command(line: &str) -> Result<Command, InputError> {
-    let _ = line;
-    todo!()
+    let text = line.trim().to_lowercase();
+    let command = match text.as_str() {
+        "" => return Err(InputError::Empty),
+        "r" | "relancer" => Command::Roll,
+        "b" | "e" | "encaisser" => Command::Bank,
+        "s" | "conseil" => Command::Suggest,
+        "a" | "aide" => Command::ToggleHelp,
+        "?" | "regles" | "règles" => Command::Rules,
+        "q" | "quitter" => Command::Quit,
+        _ => {
+            let mut indices = Vec::new();
+            for token in text.split(|c: char| c.is_whitespace() || c == ',') {
+                if token.is_empty() {
+                    continue;
+                }
+                if !token.chars().all(|c| ('1'..='6').contains(&c)) {
+                    return Err(InputError::Unknown(token.to_string()));
+                }
+                indices.extend(token.bytes().map(|b| (b - b'1') as usize));
+            }
+            Command::Keep(indices)
+        }
+    };
+    Ok(command)
 }
 
 #[cfg(test)]
