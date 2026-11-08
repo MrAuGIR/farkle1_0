@@ -1,0 +1,11 @@
+[package]
+name = "farkle-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "farkle"
+path = "src/main.rs"
+
+[dependencies]
+farkle-core = { path = "../farkle-core" }
