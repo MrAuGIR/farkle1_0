@@ -9,19 +9,17 @@ pub struct Die(u8);
 impl Die {
     /// Crée un dé, `None` si la valeur n'est pas entre 1 et 6.
     pub fn new(value: u8) -> Option<Die> {
-        let _ = value;
-        todo!()
+        (1..=6).contains(&value).then_some(Die(value))
     }
 
     pub fn value(self) -> u8 {
-        todo!()
+        self.0
     }
 }
 
 /// Convertit une liste de valeurs en dés, `None` si une valeur est invalide.
 pub fn dice_from(values: &[u8]) -> Option<Vec<Die>> {
-    let _ = values;
-    todo!()
+    values.iter().map(|&v| Die::new(v)).collect()
 }
 
 /// Source de lancers de dés.
@@ -39,15 +37,32 @@ pub struct RandomRoller {
 
 impl RandomRoller {
     pub fn from_seed(seed: u64) -> Self {
-        let _ = seed;
-        todo!()
+        RandomRoller { state: seed }
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    /// Tirage uniforme entre 1 et 6 (rejet pour éviter le biais du modulo).
+    fn next_face(&mut self) -> u8 {
+        const LIMIT: u64 = u64::MAX - (u64::MAX % 6);
+        loop {
+            let x = self.next_u64();
+            if x < LIMIT {
+                return (x % 6) as u8 + 1;
+            }
+        }
     }
 }
 
 impl DiceRoller for RandomRoller {
     fn roll(&mut self, n: usize) -> Vec<Die> {
-        let _ = (n, &mut self.state);
-        todo!()
+        (0..n).map(|_| Die(self.next_face())).collect()
     }
 }
 
@@ -60,16 +75,27 @@ pub struct ScriptedRoller {
 impl ScriptedRoller {
     /// Panique si une valeur n'est pas entre 1 et 6.
     pub fn new(rolls: Vec<Vec<u8>>) -> Self {
-        let _ = rolls;
-        todo!()
+        let rolls = rolls
+            .into_iter()
+            .map(|r| dice_from(&r).unwrap_or_else(|| panic!("valeur de dé invalide : {r:?}")))
+            .collect();
+        ScriptedRoller { rolls }
     }
 }
 
 impl DiceRoller for ScriptedRoller {
     /// Panique si le script est épuisé ou si le nombre de dés ne correspond pas.
     fn roll(&mut self, n: usize) -> Vec<Die> {
-        let _ = (n, &mut self.rolls);
-        todo!()
+        let roll = self
+            .rolls
+            .pop_front()
+            .expect("ScriptedRoller : plus de lancer prévu");
+        assert_eq!(
+            roll.len(),
+            n,
+            "ScriptedRoller : {n} dés attendus, lancer {roll:?}"
+        );
+        roll
     }
 }
 

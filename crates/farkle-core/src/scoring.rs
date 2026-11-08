@@ -21,22 +21,106 @@ pub enum Pattern {
 impl Pattern {
     /// Points rapportés par ce motif.
     pub fn points(self) -> u32 {
-        todo!()
+        match self {
+            Pattern::Single(1) => 100,
+            Pattern::Single(_) => 50,
+            Pattern::OfAKind { face, count } => {
+                let base = if face == 1 { 1000 } else { face as u32 * 100 };
+                base << (count - 3)
+            }
+            Pattern::LowStraight => 500,
+            Pattern::HighStraight => 750,
+            Pattern::FullStraight => 1500,
+        }
     }
 }
 
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let _ = f;
-        todo!()
+        match self {
+            Pattern::Single(face) => write!(f, "un {face}"),
+            Pattern::OfAKind { face, count } => {
+                let n = ["trois", "quatre", "cinq", "six"][*count as usize - 3];
+                write!(f, "{n} {face}")
+            }
+            Pattern::LowStraight => write!(f, "suite 1-5"),
+            Pattern::HighStraight => write!(f, "suite 2-6"),
+            Pattern::FullStraight => write!(f, "suite 1-6"),
+        }
     }
 }
 
 /// Meilleur découpage de **toute** la sélection en motifs.
 /// `None` si la sélection est vide ou contient un dé qui ne marque pas.
 pub fn best_partition(selection: &[Die]) -> Option<(u32, Vec<Pattern>)> {
-    let _ = selection;
-    todo!()
+    if selection.is_empty() {
+        return None;
+    }
+    let mut counts = [0u8; 7];
+    for d in selection {
+        counts[d.value() as usize] += 1;
+    }
+    best_from_counts(&mut counts)
+}
+
+/// Recherche exhaustive (au plus 6 dés) du découpage qui consomme tous les dés
+/// avec le meilleur score.
+fn best_from_counts(counts: &mut [u8; 7]) -> Option<(u32, Vec<Pattern>)> {
+    if counts.iter().all(|&c| c == 0) {
+        return Some((0, Vec::new()));
+    }
+    let mut best: Option<(u32, Vec<Pattern>)> = None;
+    let mut consider = |counts: &mut [u8; 7], pattern: Pattern, faces: &[(u8, u8)]| {
+        for &(face, n) in faces {
+            counts[face as usize] -= n;
+        }
+        if let Some((points, mut rest)) = best_from_counts(counts) {
+            let total = points + pattern.points();
+            if best.as_ref().is_none_or(|(b, _)| total > *b) {
+                rest.insert(0, pattern);
+                best = Some((total, rest));
+            }
+        }
+        for &(face, n) in faces {
+            counts[face as usize] += n;
+        }
+    };
+
+    let has = |counts: &[u8; 7], faces: std::ops::RangeInclusive<u8>| {
+        faces.clone().all(|f| counts[f as usize] >= 1)
+    };
+    if has(counts, 1..=6) {
+        consider(
+            counts,
+            Pattern::FullStraight,
+            &[(1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)],
+        );
+    }
+    if has(counts, 1..=5) {
+        consider(
+            counts,
+            Pattern::LowStraight,
+            &[(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)],
+        );
+    }
+    if has(counts, 2..=6) {
+        consider(
+            counts,
+            Pattern::HighStraight,
+            &[(2, 1), (3, 1), (4, 1), (5, 1), (6, 1)],
+        );
+    }
+    for face in 1..=6u8 {
+        for count in 3..=counts[face as usize] {
+            consider(counts, Pattern::OfAKind { face, count }, &[(face, count)]);
+        }
+    }
+    for face in [1u8, 5] {
+        if counts[face as usize] >= 1 {
+            consider(counts, Pattern::Single(face), &[(face, 1)]);
+        }
+    }
+    best
 }
 
 /// Points d'une sélection, `None` si elle est vide ou contient un dé qui ne marque pas.
@@ -46,8 +130,12 @@ pub fn score_selection(selection: &[Die]) -> Option<u32> {
 
 /// Vrai si le lancer ne contient aucun dé qui marque.
 pub fn is_farkle(roll: &[Die]) -> bool {
-    let _ = roll;
-    todo!()
+    let mut counts = [0u8; 7];
+    for d in roll {
+        counts[d.value() as usize] += 1;
+    }
+    // Toute suite contient un 1 ou un 5 : il suffit de tester 1, 5 et les brelans.
+    counts[1] == 0 && counts[5] == 0 && counts.iter().all(|&c| c < 3)
 }
 
 #[cfg(test)]

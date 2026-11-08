@@ -1,7 +1,8 @@
 //! Recherche de toutes les mises de côté possibles dans un lancer (base de l'aide).
 
 use crate::dice::Die;
-use crate::scoring::Pattern;
+use crate::scoring::{Pattern, best_partition};
+use std::collections::HashSet;
 
 /// Une mise de côté valide : les dés gardés, leurs points et leur découpage en motifs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,8 +16,32 @@ pub struct Combo {
 /// Toutes les mises de côté valides (sans doublon), triées par score décroissant
 /// puis par nombre de dés croissant. Vide si le lancer est un Farkle.
 pub fn find_combos(roll: &[Die]) -> Vec<Combo> {
-    let _ = roll;
-    todo!()
+    let mut seen = HashSet::new();
+    let mut combos = Vec::new();
+    for mask in 1u32..(1 << roll.len()) {
+        let mut dice: Vec<Die> = (0..roll.len())
+            .filter(|i| mask & (1 << i) != 0)
+            .map(|i| roll[i])
+            .collect();
+        dice.sort();
+        if !seen.insert(dice.clone()) {
+            continue;
+        }
+        if let Some((score, patterns)) = best_partition(&dice) {
+            combos.push(Combo {
+                dice,
+                score,
+                patterns,
+            });
+        }
+    }
+    combos.sort_by(|a, b| {
+        b.score
+            .cmp(&a.score)
+            .then(a.dice.len().cmp(&b.dice.len()))
+            .then(a.dice.cmp(&b.dice))
+    });
+    combos
 }
 
 #[cfg(test)]
