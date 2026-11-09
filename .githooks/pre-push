@@ -8,4 +8,8 @@ echo "▶ pre-push : cargo clippy"
 cargo clippy --workspace --all-targets -- -D warnings
 echo "▶ pre-push : cargo test"
 cargo test --workspace
+if command -v node >/dev/null; then
+  echo "▶ pre-push : tests JS"
+  node --test 'web/tests/*.test.mjs'
+fi
 echo "✔ pre-push OK"

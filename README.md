@@ -45,12 +45,22 @@ une exception avec un message en français) :
   conseil (`advice`, `recommendation`) et dernier événement (`last_event`) ;
 - `combos([dés])` et `rules_markdown()`.
 
+## Jouer dans le navigateur
+```bash
+wasm-pack build crates/farkle-web --target web --out-dir ../../web/pkg
+python3 -m http.server -d web 8000    # puis ouvrir http://localhost:8000
+```
+Cliquez sur les dés à garder, puis « Garder & relancer » ou « Garder & encaisser ».
+L'interrupteur **Aide** surligne les dés qui marquent et affiche le conseil et les combinaisons ;
+le bouton **?** affiche les règles. Recette manuelle : [docs/RECETTE-WEB.md](docs/RECETTE-WEB.md).
+Tests de la logique JS (rendu markdown, textes) : `node --test 'web/tests/*.test.mjs'`.
+
 ## Développement
 ```bash
-git config core.hooksPath .githooks   # active le hook pre-push (fmt + clippy + tests)
+git config core.hooksPath .githooks   # active le hook pre-push (fmt + clippy + tests Rust et JS)
 cargo test --workspace
 cargo run -p farkle-cli
 ```
 
 Workflow : une branche `lot-N/<nom>` par lot, depuis `develop`, puis merge `--no-ff` dans `develop`.
-La CI GitHub Actions (`.github/workflows/ci.yml`) lance fmt, clippy, tests, build WASM et tests WASM (Node) sur chaque push/PR.
+La CI GitHub Actions (`.github/workflows/ci.yml`) lance fmt, clippy, tests, build WASM, tests WASM et tests JS (Node) sur chaque push/PR.
