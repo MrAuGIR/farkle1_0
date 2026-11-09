@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farkle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Farkle</h1>
+    <div class="topbar-actions">
+      <label class="switch" title="Surligne les combinaisons et donne un conseil">
+        <input type="checkbox" id="help-toggle">
+        <span class="slider" aria-hidden="true"></span>
+        Aide
+      </label>
+      <button id="rules-btn" class="round" title="Règles du jeu" aria-label="Règles du jeu">?</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="config" class="card">
+      <h2>Nouvelle partie</h2>
+      <p>Affrontez <strong>Hans</strong> aux dés : le premier qui atteint le score cible l'emporte.</p>
+      <form id="config-form">
+        <label for="target">Score cible</label>
+        <div class="target-row">
+          <input type="number" id="target" min="100" max="100000" step="100" value="4000" required>
+          <div class="presets">
+            <button type="button" data-target="2000">2000</button>
+            <button type="button" data-target="4000">4000</button>
+            <button type="button" data-target="8000">8000</button>
+          </div>
+        </div>
+        <button type="submit" class="primary">Commencer</button>
+      </form>
+      <p id="load-error" class="error" hidden></p>
+    </section>
+
+    <section id="table" hidden>
+      <div id="scores" class="scores"></div>
+
+      <div class="board">
+        <div id="turn" class="turn"></div>
+        <div id="dice" class="dice" aria-label="Dés du lancer"></div>
+        <div id="selection" class="selection"></div>
+        <div class="kept-row">
+          <span>Mis de côté :</span>
+          <div id="kept" class="dice small"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="roll-btn" class="primary">Lancer</button>
+        <button id="reroll-btn">Garder &amp; relancer</button>
+        <button id="bank-btn">Garder &amp; encaisser</button>
+      </div>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+
+      <aside id="help" class="help" hidden></aside>
+
+      <div id="gameover" class="gameover" hidden>
+        <p id="gameover-text"></p>
+        <button id="replay-btn" class="primary">Rejouer</button>
+        <button id="config-btn">Changer le score cible</button>
+      </div>
+
+      <details class="log" open>
+        <summary>Journal</summary>
+        <ol id="log"></ol>
+      </details>
+    </section>
+  </main>
+
+  <div id="rules" class="overlay" hidden>
+    <div class="panel" role="dialog" aria-modal="true" aria-label="Règles du jeu">
+      <button id="rules-close" class="round close" aria-label="Fermer">×</button>
+      <div id="rules-body" class="rules-body"></div>
+    </div>
+  </div>
+
+  <noscript>Ce jeu nécessite JavaScript.</noscript>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
