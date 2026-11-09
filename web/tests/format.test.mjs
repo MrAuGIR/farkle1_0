@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { describeEvent, formatPercent, selectionScore } from "../format.js";
+import { describeEvent, formatPercent, plural, selectionScore } from "../format.js";
 
 const players = [{ name: "Vous", score: 0 }, { name: "Hans", score: 0 }];
 
@@ -96,4 +96,11 @@ test("score de la sélection en cours", () => {
   // Sélection invalide ou vide.
   assert.equal(selectionScore(dice, [2], combos), null);
   assert.equal(selectionScore(dice, [], combos), null);
+});
+
+test("accord du pluriel", () => {
+  assert.equal(plural(1, "dé"), "1 dé");
+  assert.equal(plural(0, "dé"), "0 dé");
+  assert.equal(plural(5, "dé"), "5 dés");
+  assert.equal(plural(2, "point"), "2 points");
 });

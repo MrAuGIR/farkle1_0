@@ -175,7 +175,7 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "farkle-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -185,11 +185,11 @@ dependencies = [
 
 [[package]]
 name = "farkle-core"
-version = "0.1.0"
+version = "1.0.0"
 
 [[package]]
 name = "farkle-web"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "farkle-core",
  "serde",

@@ -3,7 +3,7 @@
 
 import init, { WebGame, rules_markdown } from "./pkg/farkle_web.js";
 import { renderMarkdown } from "./markdown.js";
-import { describeEvent, formatPercent, selectionScore } from "./format.js";
+import { describeEvent, formatPercent, plural, selectionScore } from "./format.js";
 
 const HUMAN = 0;
 const AI_STEP_DELAY = 900; // ms entre deux étapes de l'IA
@@ -270,7 +270,7 @@ function renderHelp() {
     <h3>Conseil</h3>
     <p>Garder <strong>${best}</strong> (${a.score} points), puis
       <strong>${decisionText(a.decision)}</strong> : ${a.turn_points_after} points en jeu,
-      ${a.dice_left_after} dés à relancer, risque de Farkle ${formatPercent(a.farkle_probability)}.</p>
+      ${plural(a.dice_left_after, "dé")} à relancer, risque de Farkle ${formatPercent(a.farkle_probability)}.</p>
     <h3>Combinaisons possibles</h3>`;
   const list = document.createElement("ul");
   list.className = "combos";

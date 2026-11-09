@@ -2,5 +2,7 @@
 name = "farkle-core"
 version.workspace = true
 edition.workspace = true
+repository.workspace = true
+description = "Moteur du Farkle (règles Kingdom Come: Deliverance) : scoring, partie, conseiller, IA"
 
 [dependencies]

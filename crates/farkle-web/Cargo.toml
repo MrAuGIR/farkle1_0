@@ -2,6 +2,8 @@
 name = "farkle-web"
 version.workspace = true
 edition.workspace = true
+repository.workspace = true
+description = "Façade WebAssembly du moteur Farkle"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

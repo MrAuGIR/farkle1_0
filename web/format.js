@@ -52,3 +52,8 @@ export function selectionScore(dice, selected, combos) {
   const combo = combos.find((c) => key(c.dice) === wanted);
   return combo ? combo.score : null;
 }
+
+/** « 1 dé », « 5 dés » (en français, 0 et 1 sont au singulier). */
+export function plural(n, word) {
+  return `${n} ${word}${n > 1 ? "s" : ""}`;
+}
