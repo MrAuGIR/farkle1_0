@@ -25,3 +25,14 @@ jobs:
         run: cargo test --workspace
       - name: Build WASM
         run: cargo build -p farkle-web --target wasm32-unknown-unknown
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - name: Tests WASM (Node)
+        run: wasm-pack test --node crates/farkle-web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests JS (interface web)
+        run: node --test 'web/tests/*.test.mjs'

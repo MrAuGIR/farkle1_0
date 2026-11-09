@@ -2,6 +2,8 @@
 name = "farkle-cli"
 version.workspace = true
 edition.workspace = true
+repository.workspace = true
+description = "Farkle en console : partie contre l'IA et mode entraîner"
 
 [lib]
 path = "src/lib.rs"
