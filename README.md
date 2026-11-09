@@ -29,6 +29,22 @@ Saisissez chaque lancer (`1 5 5 3 2 6` ou `155326`) : le programme affiche les c
 la meilleure mise de côté, puis conseille de relancer ou d'encaisser (risque de Farkle, espérance).
 Indiquez ensuite les dés réellement gardés, puis `r` (je relance) ou `b` (j'encaisse).
 
+## WebAssembly
+Prérequis : `rustup target add wasm32-unknown-unknown` et `cargo install wasm-pack --locked`
+(avec rustc 1.90, prendre `--version 0.13.1`).
+```bash
+wasm-pack build crates/farkle-web --target web --out-dir ../../web/pkg   # génère web/pkg
+wasm-pack test --node crates/farkle-web                                  # tests dans Node
+```
+API exposée à JavaScript (chaque action renvoie l'état de la partie en JSON, ou lève
+une exception avec un message en français) :
+- `new WebGame(target, seed)` : partie « Vous » (joueur 0) contre « Hans » (IA, joueur 1) ;
+- `roll()`, `select([indices])`, `reroll()`, `bank()` : actions du joueur ;
+- `ai_turn_step()` : une étape du tour de l'IA (à appeler tant que `state.ai_turn` est vrai) ;
+- `state()` : phase (`start`, `choosing`, `kept`, `game_over`), scores, dés, combinaisons,
+  conseil (`advice`, `recommendation`) et dernier événement (`last_event`) ;
+- `combos([dés])` et `rules_markdown()`.
+
 ## Développement
 ```bash
 git config core.hooksPath .githooks   # active le hook pre-push (fmt + clippy + tests)
@@ -37,4 +53,4 @@ cargo run -p farkle-cli
 ```
 
 Workflow : une branche `lot-N/<nom>` par lot, depuis `develop`, puis merge `--no-ff` dans `develop`.
-La CI GitHub Actions (`.github/workflows/ci.yml`) lance fmt, clippy, tests et build WASM sur chaque push/PR.
+La CI GitHub Actions (`.github/workflows/ci.yml`) lance fmt, clippy, tests, build WASM et tests WASM (Node) sur chaque push/PR.
