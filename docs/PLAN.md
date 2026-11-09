@@ -1,5 +1,7 @@
 # Plan — Farkle (Rust) : console, navigateur, mode entraînement
 
+> **État (2026-11-09)** : lots 0 à 8 terminés, version `v1.0`.
+
 ## Contexte
 Le dépôt `farkle1_0` est vide : il contient seulement `cargo new` (édition 2024, `src/main.rs`), et la branche courante est `develop`. On veut un jeu de Farkle aux règles de Kingdom Come: Deliverance, où le joueur affronte une IA (PNJ). Il y aura deux modes de jeu, console et navigateur (Rust → WASM), et un mode « entraîner » en console où l'on saisit ses lancers à la main pour obtenir des conseils. Chaque mode a un interrupteur « aide » qui affiche les combinaisons possibles, et le score cible est réglable. Les règles s'affichent avec `--help` en console et dans un panneau superposé dans le navigateur.
 **Avant de coder**, on écrit les règles (`docs/REGLES.md`) et ce plan découpé en lots (`docs/PLAN.md`).

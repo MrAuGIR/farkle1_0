@@ -3,5 +3,6 @@ resolver = "3"
 members = ["crates/farkle-core", "crates/farkle-cli", "crates/farkle-web"]
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
+repository = "https://github.com/MrAuGIR/farkle1_0"
 edition = "2024"
